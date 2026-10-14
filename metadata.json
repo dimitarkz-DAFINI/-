@@ -1,0 +1,6 @@
+{
+  "name": "Hacienda Di Ink",
+  "description": "Tattoo Studio Management PWA",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
