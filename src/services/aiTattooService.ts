@@ -8,17 +8,63 @@ export interface TattooAnalysisInput {
   sizeCm?: string;
 }
 
-// Инициализация на Firebase Functions за европейския регион
+// Декларация на глобалния обект от Android WebView моста
+declare global {
+  interface Window {
+    AndroidTattooAi?: {
+      analyzeProject: (
+        description: string,
+        bodyLocation: string,
+        sizeCm: string,
+        callbackJs: string
+      ) => void;
+    };
+    __handleAndroidAiResult?: (jsonStr: string) => void;
+  }
+}
+
 const functions = getFunctions(app, 'europe-west1');
 
 /**
  * Frontend функция: callAnalyzeTattooComplexity
- * Извиква сигурно бекенд Firebase Cloud Function 'analyzeTattooComplexity',
- * без да излага Gemini API ключа във фронтенда.
+ * 1. Ако работи в мобилното приложение с App Check: извиква директно Firebase AI Logic през моста
+ * 2. Ако работи в уеб браузър (Safari / Chrome): извиква сигурната Firebase Cloud Function
+ * 3. При липса на мрежа: използва интелигентен офлайн анализ
  */
 export const callAnalyzeTattooComplexity = async (
   input: TattooAnalysisInput
 ): Promise<TattooComplexityAssessment> => {
+  // 1. Опит през Android Native Bridge (Firebase AI Logic + App Check)
+  if (typeof window !== 'undefined' && window.AndroidTattooAi) {
+    try {
+      const nativeResult = await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Android AI Bridge timeout'));
+        }, 15000);
+
+        window.__handleAndroidAiResult = (jsonStr: string) => {
+          clearTimeout(timeout);
+          resolve(jsonStr);
+        };
+
+        window.AndroidTattooAi?.analyzeProject(
+          input.description,
+          input.bodyLocation || 'Неуточнено',
+          input.sizeCm || 'Стандартен',
+          'window.__handleAndroidAiResult'
+        );
+      });
+
+      const parsed = JSON.parse(nativeResult);
+      if (parsed && !parsed.error && parsed.complexityLevel) {
+        return parsed as TattooComplexityAssessment;
+      }
+    } catch (e) {
+      console.warn('Android AI Bridge fallback to Cloud Function:', e);
+    }
+  }
+
+  // 2. Опит през Firebase Cloud Function (Secure Backend с таен API ключ)
   try {
     const analyzeFn = httpsCallable<TattooAnalysisInput, TattooComplexityAssessment>(
       functions,
@@ -26,21 +72,17 @@ export const callAnalyzeTattooComplexity = async (
     );
 
     const response = await analyzeFn(input);
-    return response.data;
+    if (response.data && response.data.complexityLevel) {
+      return response.data;
+    }
   } catch (error) {
-    console.warn(
-      '[Firebase Cloud Functions] Direct callable endpoint unreachable (development or offline mode). Using studio AI intelligence fallback:',
-      error
-    );
-
-    // Интелигентен офлайн fallback анализ за студийна непрекъсваемост при липса на връзка към бекенда
-    return fallbackStudioAIAnalysis(input);
+    console.warn('[Firebase Cloud Function] Network or endpoint offline. Using studio intelligence fallback:', error);
   }
+
+  // 3. Интелигентен студиен fallback за непрекъсваемост
+  return fallbackStudioAIAnalysis(input);
 };
 
-/**
- * Локален студиен анализ при липса на връзка с Cloud Function
- */
 const fallbackStudioAIAnalysis = (input: TattooAnalysisInput): TattooComplexityAssessment => {
   const desc = input.description.toLowerCase();
   const location = (input.bodyLocation || '').toLowerCase();
