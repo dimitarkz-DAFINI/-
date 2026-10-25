@@ -4,6 +4,7 @@ import { BottomNav } from './BottomNav';
 import type { TabId } from '../../types';
 import { AddAppointmentModal } from '../calendar/AddAppointmentModal';
 import { AddClientModal } from '../crm/AddClientModal';
+import { Calendar, Users } from 'lucide-react';
 
 interface AppLayoutProps {
   children?: React.ReactNode;

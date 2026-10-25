@@ -90,7 +90,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
   const selectedClient = clients.find((c) => c.id === selectedClientId);
   const selectedArtist = availableUsers.find((u) => u.id === selectedArtistId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validationResult.available) {
@@ -102,7 +102,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
       return;
     }
 
-    const res = addAppointment({
+    const res = await addAppointment({
       clientId: selectedClient.id,
       clientName: selectedClient.name,
       clientPhone: selectedClient.phone,
