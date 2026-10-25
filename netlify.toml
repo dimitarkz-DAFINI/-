@@ -1,0 +1,3 @@
+[build]
+  command = "npm run build"
+  publish = "app/src/main/assets/www"
