@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { HomeTab } from './components/tabs/HomeTab';
 import { CalendarTab } from './components/tabs/CalendarTab';
@@ -6,9 +6,15 @@ import { ClientsTab } from './components/tabs/ClientsTab';
 import { SessionsTab } from './components/tabs/SessionsTab';
 import { MenuTab } from './components/tabs/MenuTab';
 import type { TabId } from './types';
+import { useCalendarStore } from './stores/useCalendarStore';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
+  const loadAppointments = useCalendarStore((state) => state.loadAppointmentsFromFirestore);
+
+  useEffect(() => {
+    loadAppointments();
+  }, [loadAppointments]);
 
   const renderTabContent = () => {
     switch (activeTab) {
